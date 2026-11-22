@@ -1,0 +1,1112 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تَصْنِيفُ المَأْكُولَاتِ وَالمَشْرُوبَاتِ</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Cairo, Tajawal & Amiri (Arabic with crystal-clear Harakat) -->
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@700&family=Cairo:wght@600;700;800;900&family=Tajawal:wght@700;800;900&display=swap" rel="stylesheet">
+    <!-- MediaPipe Hands & Camera Utils -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+
+    <style>
+        body {
+            font-family: 'Cairo', 'Tajawal', sans-serif;
+            background: linear-gradient(135deg, #fefce8 0%, #e0f2fe 50%, #f3e8ff 100%);
+            min-height: 100vh;
+            user-select: none;
+            overflow-x: hidden;
+        }
+        .font-amiri {
+            font-family: 'Amiri', 'Cairo', serif;
+        }
+
+        /* Arabic Word Pill Styling */
+        .arabic-pill {
+            background: linear-gradient(180deg, #fef9c3 0%, #fde047 100%);
+            border: 3px solid #eab308;
+            border-radius: 9999px;
+            box-shadow: 0 6px 15px rgba(234, 179, 8, 0.28), inset 0 2px 4px rgba(255, 255, 255, 0.9);
+        }
+
+        /* Animations */
+        @keyframes popCard {
+            0% { transform: scale(0.75); opacity: 0; }
+            70% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop {
+            animation: popCard 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        @keyframes shakeWrong {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-12px) rotate(-2deg); }
+            40% { transform: translateX(12px) rotate(2deg); }
+            60% { transform: translateX(-8px) rotate(-1deg); }
+            80% { transform: translateX(8px) rotate(1deg); }
+        }
+        .animate-wrong {
+            animation: shakeWrong 0.45s ease-in-out;
+        }
+
+        @keyframes floatGentle {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-7px); }
+        }
+        .animate-float {
+            animation: floatGentle 2.5s ease-in-out infinite;
+        }
+
+        #confettiCanvas {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 60;
+        }
+    </style>
+</head>
+<body class="text-slate-800 flex flex-col justify-between">
+
+    <canvas id="confettiCanvas"></canvas>
+
+    <!-- ===================================================================== -->
+    <!-- شَاشَةُ البِدَايَةِ (START SCREEN - 100% ARABIC)                       -->
+    <!-- ===================================================================== -->
+    <div id="startScreenModal" class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+        <div class="bg-white rounded-3xl border-4 border-amber-400 max-w-2xl w-full p-5 sm:p-8 shadow-2xl text-center my-auto animate-pop">
+            <div class="w-16 h-16 sm:w-20 sm:h-20 mx-auto rounded-3xl bg-gradient-to-br from-emerald-500 via-teal-500 to-sky-500 flex items-center justify-center text-white text-4xl sm:text-5xl shadow-lg mb-3">
+                🖐️
+            </div>
+            <h1 class="font-black text-2xl sm:text-4xl text-indigo-950 leading-snug">
+                تَصْنِيفُ المَأْكُولَاتِ وَالمَشْرُوبَاتِ
+            </h1>
+            <p class="text-base sm:text-lg font-extrabold text-teal-700 mt-1">
+                الْعَبْ بِإِشَارَةِ اليَدِ أَمَامَ الكَامِيرَا
+            </p>
+
+            <!-- Mode Selection Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 mt-6 text-right">
+                <button id="startCardMode1" onclick="selectStartMode(1)" class="p-4 rounded-2xl border-4 border-indigo-600 bg-indigo-50/90 shadow-md transition-all flex flex-col gap-1.5 text-right">
+                    <div class="flex items-center justify-between">
+                        <span class="text-3xl">🙋</span>
+                        <span class="px-2.5 py-0.5 rounded-full bg-indigo-600 text-white text-xs font-extrabold">مُفْرَدٌ</span>
+                    </div>
+                    <div class="font-black text-base sm:text-lg text-indigo-950 mt-1">
+                        لَاعِبٌ وَاحِدٌ
+                    </div>
+                    <div class="text-xs sm:text-sm font-bold text-indigo-800">
+                        (تَحْرِيكُ اليَدِ يَمِينًا أَوْ يَسَارًا)
+                    </div>
+                </button>
+
+                <button id="startCardMode2" onclick="selectStartMode(2)" class="p-4 rounded-2xl border-4 border-slate-200 bg-slate-50 hover:border-rose-400 transition-all flex flex-col gap-1.5 text-right">
+                    <div class="flex items-center justify-between">
+                        <span class="text-3xl">🧑‍🤝‍🧑</span>
+                        <span class="px-2.5 py-0.5 rounded-full bg-rose-600 text-white text-xs font-extrabold">تَحَدٍّ</span>
+                    </div>
+                    <div class="font-black text-base sm:text-lg text-slate-900 mt-1">
+                        لَاعِبَانِ مَعًا
+                    </div>
+                    <div class="text-xs sm:text-sm font-bold text-slate-600">
+                        (إِشَارَةُ الأَصَابِعِ ١ أَوْ ٢)
+                    </div>
+                </button>
+            </div>
+
+            <!-- Action Start Buttons -->
+            <div class="mt-6 flex flex-col gap-3">
+                <button onclick="beginGameWithCamera()" class="w-full py-4 rounded-2xl bg-gradient-to-l from-emerald-500 via-teal-600 to-sky-600 hover:from-emerald-400 hover:to-sky-500 text-white font-black text-lg sm:text-xl shadow-xl transform hover:scale-[1.02] active:scale-95 transition">
+                    ابْدَأِ اللُّعْبَةَ 🎥
+                </button>
+
+                <button onclick="beginGameWithoutCamera()" class="w-full py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 border-2 border-slate-300 text-slate-700 font-extrabold text-sm sm:text-base transition">
+                    اللَّعِبُ بِدُونِ كَامِيرَا (لَمْسٌ / لَوْحَةُ المَفَاتِيحِ)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- الشَّرِيطُ العُلْوِيُّ (TOP BAR - 100% ARABIC)                          -->
+    <!-- ===================================================================== -->
+    <header class="w-full bg-white/95 backdrop-blur-md border-b-4 border-amber-300 shadow-sm sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-3 sm:px-5 py-2 flex flex-wrap items-center justify-between gap-2">
+            <!-- Title & Subtitle -->
+            <div class="flex items-center gap-2.5">
+                <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-br from-emerald-500 via-teal-500 to-sky-500 flex items-center justify-center text-white text-2xl shadow-md">
+                    🖐️
+                </div>
+                <div>
+                    <h1 class="font-black text-lg sm:text-2xl text-indigo-950 leading-none">
+                        تَصْنِيفُ المَأْكُولَاتِ وَالمَشْرُوبَاتِ
+                    </h1>
+                    <p class="text-xs font-extrabold text-teal-700 mt-0.5">
+                        الْعَبْ بِإِشَارَةِ اليَدِ أَمَامَ الكَامِيرَا
+                    </p>
+                </div>
+            </div>
+
+            <!-- Top Controls -->
+            <div class="flex items-center gap-2 flex-wrap">
+                <!-- Home Button (Return to Main Menu) -->
+                <button onclick="returnToHome()" class="px-3.5 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 border-2 border-indigo-300 text-indigo-950 text-xs sm:text-sm font-black flex items-center gap-1.5 shadow-sm transition active:scale-95">
+                    <span>الرَّئِيسِيَّةُ 🏠</span>
+                </button>
+
+                <!-- Mode Switcher -->
+                <div class="bg-slate-100 p-1 rounded-2xl border-2 border-slate-200 flex text-xs sm:text-sm font-extrabold">
+                    <button id="btnPlayer1" onclick="setPlayerMode(1)" class="px-3 py-1.5 rounded-xl transition-all flex items-center gap-1 bg-indigo-600 text-white shadow">
+                        <span>🙋</span> <span>لَاعِبٌ وَاحِدٌ</span>
+                    </button>
+                    <button id="btnPlayer2" onclick="setPlayerMode(2)" class="px-3 py-1.5 rounded-xl transition-all flex items-center gap-1 text-slate-600 hover:text-indigo-700">
+                        <span>🧑‍🤝‍🧑</span> <span>لَاعِبَانِ</span>
+                    </button>
+                </div>
+
+                <!-- Repeat Audio Button -->
+                <button onclick="speakCurrentWord()" class="px-3.5 py-2 rounded-xl bg-amber-100 hover:bg-amber-200 border-2 border-amber-400 text-amber-950 text-xs sm:text-sm font-black flex items-center gap-1.5 shadow-sm transition active:scale-95">
+                    <span>اسْتَمِعْ 🔊</span>
+                </button>
+
+                <!-- Reset Button -->
+                <button onclick="restartSession()" class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 border-2 border-slate-300 text-slate-800 text-xs sm:text-sm font-black flex items-center gap-1.5 transition active:scale-95">
+                    <span>إِعَادَةٌ 🔄</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- ===================================================================== -->
+    <!-- سَاحَةُ اللَّعِبِ الرَّئِيسِيَّةُ (MAIN GAME STAGE)                   -->
+    <!-- ===================================================================== -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-5 py-3 flex flex-col gap-3">
+
+        <!-- Scoreboard & Progress Bar -->
+        <div class="bg-white/95 rounded-2xl border-2 border-indigo-100 px-4 py-2.5 shadow-sm flex flex-wrap items-center justify-between gap-3">
+            <!-- Player 1 / Solo Score -->
+            <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2.5 bg-emerald-50 px-3.5 py-1.5 rounded-xl border-2 border-emerald-300">
+                    <span class="text-xl">⭐</span>
+                    <div>
+                        <div id="p1LabelTitle" class="text-xs font-extrabold text-emerald-900">النِّقَاطُ</div>
+                        <div id="p1ScoreText" class="font-black text-xl text-emerald-950 leading-none">٠</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Word Progress Counter -->
+            <div class="flex items-center gap-2">
+                <span id="cardCounterText" class="px-4 py-1.5 rounded-xl bg-indigo-100 text-indigo-950 font-black text-sm sm:text-base border-2 border-indigo-200">
+                    الكَلِمَةُ ١ مِنْ ١٧
+                </span>
+            </div>
+
+            <!-- Player 2 Score (Visible in 2-Player Mode) -->
+            <div id="p2ScoreBox" class="hidden items-center gap-2.5 bg-sky-50 px-3.5 py-1.5 rounded-xl border-2 border-sky-300">
+                <span class="text-xl">🏆</span>
+                <div>
+                    <div class="text-xs font-extrabold text-sky-900">اللَّاعِبُ الثَّانِي</div>
+                    <div id="p2ScoreText" class="font-black text-xl text-sky-950 leading-none">٠</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Central Interactive Stage: Mirrored Webcam + Floating Arabic Word Card -->
+        <div class="relative w-full h-[430px] sm:h-[490px] rounded-3xl overflow-hidden border-4 border-white bg-slate-900 shadow-2xl">
+            
+            <!-- Hidden Raw Video Element -->
+            <video id="webcamVideo" class="hidden" playsinline autoplay muted></video>
+            
+            <!-- Main Interactive Canvas (Mirrored Camera, Zones, Hand Skeleton & Dwell Ring) -->
+            <canvas id="gestureCanvas" class="w-full h-full block"></canvas>
+
+            <!-- Top Zone Headers Overlay (In RTL: First child = Right side of screen, Second child = Left side of screen) -->
+            <div class="absolute top-3 inset-x-3 flex justify-between items-start pointer-events-none z-10">
+                <!-- Right Zone Header on Screen: 🍱 المَأْكُولَاتُ -->
+                <div class="bg-emerald-600/95 backdrop-blur-md border-2 border-emerald-200 text-white px-4 sm:px-6 py-2.5 rounded-2xl shadow-lg flex items-center gap-3">
+                    <span class="text-3xl sm:text-4xl">🍱</span>
+                    <div>
+                        <div class="font-black text-2xl sm:text-3xl leading-none">المَأْكُولَاتُ</div>
+                        <div id="rightGestureInstruction" class="text-xs sm:text-sm font-extrabold text-emerald-100 mt-1">
+                            ارْفَعْ يَدَكَ هُنَا
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Left Zone Header on Screen: 🥤 المَشْرُوبَاتُ -->
+                <div class="bg-sky-600/95 backdrop-blur-md border-2 border-sky-200 text-white px-4 sm:px-6 py-2.5 rounded-2xl shadow-lg flex items-center gap-3">
+                    <div>
+                        <div class="font-black text-2xl sm:text-3xl leading-none">المَشْرُوبَاتُ</div>
+                        <div id="leftGestureInstruction" class="text-xs sm:text-sm font-extrabold text-sky-100 mt-1">
+                            ارْفَعْ يَدَكَ هُنَا
+                        </div>
+                    </div>
+                    <span class="text-3xl sm:text-4xl">🥤</span>
+                </div>
+            </div>
+
+            <!-- Center Floating Arabic Flashcard -->
+            <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-20 px-4">
+                
+                <!-- Camera Status Banner (100% Arabic) -->
+                <div id="cameraBanner" class="hidden mb-2 px-4 py-1.5 rounded-full bg-slate-900/95 border-2 border-amber-400 text-amber-300 text-xs sm:text-sm font-extrabold shadow-lg">
+                    جَارِي تَشْغِيلُ الكَامِيرَا وَالذَّكَاءِ الاصْطِنَاعِيِّ...
+                </div>
+
+                <!-- Active Arabic Vocabulary Card -->
+                <div id="activeWordCard" class="pointer-events-auto bg-white/95 backdrop-blur-md border-4 border-amber-400 rounded-3xl p-4 sm:p-6 shadow-[0_12px_35px_rgba(0,0,0,0.45)] flex flex-col items-center max-w-[270px] sm:max-w-[310px] w-full transition-transform">
+                    
+                    <!-- Audio Replay Trigger -->
+                    <div class="w-full flex justify-between items-center mb-1">
+                        <span class="text-xs font-extrabold text-slate-500">صَنِّفِ الكَلِمَةَ</span>
+                        <button onclick="speakCurrentWord()" class="px-3 py-1 rounded-full bg-amber-100 hover:bg-amber-200 text-amber-950 font-black text-xs flex items-center gap-1 shadow-sm transition active:scale-95">
+                            <span>اسْتَمِعْ 🔊</span>
+                        </button>
+                    </div>
+
+                    <!-- Emoji Illustration -->
+                    <div id="cardEmoji" class="text-6xl sm:text-7xl my-2 animate-float drop-shadow">
+                        🍚
+                    </div>
+
+                    <!-- Large Arabic Word with Full Harakat -->
+                    <div class="arabic-pill w-full py-2.5 px-4 text-center mt-1">
+                        <span id="cardArabic" class="font-black text-4xl sm:text-5xl text-slate-950 block leading-snug">
+                            أَرُزٌّ
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Instant Feedback Toast (100% Arabic) -->
+                <div id="feedbackToast" class="mt-3 px-6 py-2.5 rounded-2xl font-black text-base sm:text-lg text-white shadow-xl opacity-0 transition-opacity duration-200">
+                    أَحْسَنْتَ! إِجَابَةٌ صَحِيحَةٌ 🌟
+                </div>
+            </div>
+
+            <!-- Bottom Clickable Zone Buttons (In RTL: First child = Right side = المَأْكُولَاتُ, Second child = Left side = المَشْرُوبَاتُ) -->
+            <div class="absolute bottom-3 inset-x-3 flex items-center justify-between gap-2 z-20 pointer-events-auto">
+                <button onclick="triggerManualAnswer(1, 'makanan')" class="px-4 sm:px-5 py-2.5 rounded-2xl bg-emerald-600/95 hover:bg-emerald-500 text-white font-black text-sm sm:text-base shadow-lg backdrop-blur-sm border-2 border-emerald-200 transition active:scale-95">
+                    🍱 المَأْكُولَاتُ
+                </button>
+
+                <button onclick="triggerManualAnswer(1, 'minuman')" class="px-4 sm:px-5 py-2.5 rounded-2xl bg-sky-600/95 hover:bg-sky-500 text-white font-black text-sm sm:text-base shadow-lg backdrop-blur-sm border-2 border-sky-200 transition active:scale-95">
+                    🥤 المَشْرُوبَاتُ
+                </button>
+            </div>
+        </div>
+
+        <!-- Live Gesture Instruction Banner (100% Arabic) -->
+        <div class="bg-white/95 rounded-2xl border-2 border-amber-300 p-3 text-center shadow-sm">
+            <p id="liveInstructionBanner" class="font-black text-sm sm:text-base text-indigo-950">
+                حَرِّكْ يَدَكَ إِلَى اليَمِينِ (المَأْكُولَاتُ) أَوْ إِلَى اليَسَارِ (المَشْرُوبَاتُ) وَأَبْقِهَا لِثَانِيَةٍ وَاحِدَةٍ
+            </p>
+        </div>
+
+    </main>
+
+    <!-- ===================================================================== -->
+    <!-- شَاشَةُ النَّتِيجَةِ النِّهَائِيَّةِ (END-OF-GAME SUMMARY - 100% ARABIC) -->
+    <!-- ===================================================================== -->
+    <div id="summaryModal" class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm hidden items-center justify-center p-3 sm:p-6 overflow-y-auto">
+        <div class="bg-white rounded-3xl border-4 border-amber-400 max-w-4xl w-full p-5 sm:p-7 shadow-2xl my-auto animate-pop">
+            <div class="text-center mb-4">
+                <div class="text-5xl mb-1">🏆🌟🏆</div>
+                <h2 id="summaryTitle" class="font-black text-2xl sm:text-3xl text-indigo-950">
+                    مَبْرُوكٌ! أَكْمَلْتَ التَّصْنِيفَ بِنَجَاحٍ 🏆
+                </h2>
+                <p id="summarySubtitle" class="text-teal-800 font-extrabold text-base sm:text-lg mt-1">
+                    النِّقَاطُ النِّهَائِيَّةُ: ٠
+                </p>
+            </div>
+
+            <!-- Categorized Review Lists (Clickable to Hear Pronunciation) -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[50vh] overflow-y-auto pl-1">
+                <!-- المَأْكُولَاتُ -->
+                <div class="bg-emerald-50 border-2 border-emerald-300 rounded-2xl p-3.5">
+                    <h3 class="font-black text-xl sm:text-2xl text-emerald-950 border-b-2 border-emerald-200 pb-2 mb-3">
+                        🍱 المَأْكُولَاتُ (١٢)
+                    </h3>
+                    <div id="reviewMakanan" class="grid grid-cols-2 gap-2"></div>
+                </div>
+
+                <!-- المَشْرُوبَاتُ -->
+                <div class="bg-sky-50 border-2 border-sky-300 rounded-2xl p-3.5">
+                    <h3 class="font-black text-xl sm:text-2xl text-sky-950 border-b-2 border-sky-200 pb-2 mb-3">
+                        🥤 المَشْرُوبَاتُ (٥)
+                    </h3>
+                    <div id="reviewMinuman" class="grid grid-cols-1 gap-2"></div>
+                </div>
+            </div>
+
+            <div class="mt-6 flex flex-wrap items-center justify-center gap-3">
+                <button onclick="closeModalAndRestart()" class="px-7 py-4 rounded-2xl bg-gradient-to-l from-emerald-500 via-teal-600 to-sky-600 hover:from-emerald-400 hover:to-sky-500 text-white font-black text-base sm:text-lg shadow-xl transform hover:scale-105 active:scale-95 transition">
+                    الْعَبْ مَرَّةً أُخْرَى 🔄
+                </button>
+                <button onclick="returnToHome()" class="px-7 py-4 rounded-2xl bg-indigo-100 hover:bg-indigo-200 border-2 border-indigo-400 text-indigo-950 font-black text-base sm:text-lg shadow-md transform hover:scale-105 active:scale-95 transition">
+                    الرَّئِيسِيَّةُ 🏠
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =========================================================================
+        // ١. قَائِمَةُ المُفْرَدَاتِ العَرَبِيَّةِ (١٧ كَلِمَةً بِالحَرَكَاتِ الكَامِلَةِ)
+        // =========================================================================
+        const VOCABULARY = [
+            // المَأْكُولَاتُ (١٢ كَلِمَةً)
+            { arabic: 'أَرُزٌّ',      category: 'makanan', emoji: '🍚' },
+            { arabic: 'خُبْزٌ',      category: 'makanan', emoji: '🍞' },
+            { arabic: 'مَكْرُونَةٌ',  category: 'makanan', emoji: '🍝' },
+            { arabic: 'كَعْكٌ',      category: 'makanan', emoji: '🍰' },
+            { arabic: 'حَلْوَى',     category: 'makanan', emoji: '🍬' },
+            { arabic: 'بُوظَةٌ',     category: 'makanan', emoji: '🍦' },
+            { arabic: 'حِسَاءٌ',     category: 'makanan', emoji: '🍲' },
+            { arabic: 'سَمَكٌ',      category: 'makanan', emoji: '🐟' },
+            { arabic: 'دَجَاجٌ',     category: 'makanan', emoji: '🍗' },
+            { arabic: 'لَحْمٌ',      category: 'makanan', emoji: '🥩' },
+            { arabic: 'خَضْرَوَاتٌ', category: 'makanan', emoji: '🥦' },
+            { arabic: 'فَوَاكِهُ',   category: 'makanan', emoji: '🍎' },
+            // المَشْرُوبَاتُ (٥ كَلِمَاتٍ)
+            { arabic: 'حَلِيبٌ',     category: 'minuman', emoji: '🥛' },
+            { arabic: 'مَاءٌ',       category: 'minuman', emoji: '💧' },
+            { arabic: 'شَايٌ',       category: 'minuman', emoji: '🫖' },
+            { arabic: 'قَهْوَةٌ',    category: 'minuman', emoji: '☕' },
+            { arabic: 'عَصِيرٌ',     category: 'minuman', emoji: '🧃' }
+        ];
+
+        const PRAISE_PHRASES = [
+            'أَحْسَنْتَ! إِجَابَةٌ صَحِيحَةٌ 🌟',
+            'مُمْتَازٌ! بَارَكَ اللَّهُ فِيكَ 🎉',
+            'رَائِعٌ جِدًّا! 👏',
+            'صَحِيحٌ! أَنْتَ ذَكِيٌّ ⭐'
+        ];
+
+        const PRAISE_TTS = [
+            'أَحْسَنْتَ',
+            'مُمْتَازٌ',
+            'رَائِعٌ جِدًّا',
+            'إِجَابَةٌ صَحِيحَةٌ'
+        ];
+
+        function toArabicDigits(num) {
+            const easternDigits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+            return String(num).replace(/\d/g, d => easternDigits[Number(d)]);
+        }
+
+        // =========================================================================
+        // ٢. حَالَةُ اللُّعْبَةِ (STATE)
+        // =========================================================================
+        const HOLD_DURATION_MS = 1000;
+
+        const state = {
+            playerMode: 1, // 1 = لَاعِبٌ وَاحِدٌ, 2 = لَاعِبَانِ مَعًا
+            useCamera: true,
+            deck: [],
+            currentIndex: 0,
+            isTransitioning: false,
+            questionStartTime: 0,
+            nextCardTimeout: null,
+            wrongTimeout: null,
+
+            p1: { score: 0, hoverChoice: null, holdStart: 0, progress: 0, handPos: null },
+            p2: { score: 0, hoverChoice: null, holdStart: 0, progress: 0, handPos: null },
+
+            cameraReady: false,
+            detectedHands: []
+        };
+
+        const videoEl = document.getElementById('webcamVideo');
+        const canvasEl = document.getElementById('gestureCanvas');
+        const ctx = canvasEl.getContext('2d');
+
+        // =========================================================================
+        // ٣. الصَّوْتُ وَالنُّطْقُ العَرَبِيُّ (WEB AUDIO + SPEECH SYNTHESIS)
+        // =========================================================================
+        const SoundFX = {
+            ctx: null,
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            },
+            tone(freq, type, duration, vol = 0.2) {
+                try {
+                    this.init();
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                    gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + duration);
+                } catch (e) {}
+            },
+            correct() {
+                this.tone(523.25, 'triangle', 0.14, 0.22);
+                setTimeout(() => this.tone(659.25, 'triangle', 0.16, 0.22), 90);
+                setTimeout(() => this.tone(783.99, 'triangle', 0.26, 0.25), 180);
+            },
+            wrong() {
+                this.tone(220, 'sawtooth', 0.18, 0.2);
+                setTimeout(() => this.tone(175, 'sawtooth', 0.28, 0.22), 140);
+            },
+            win() {
+                [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => {
+                    setTimeout(() => this.tone(f, 'triangle', 0.28, 0.24), i * 110);
+                });
+            }
+        };
+
+        function speakArabic(text) {
+            if (!('speechSynthesis' in window)) return;
+            try {
+                window.speechSynthesis.cancel();
+                const utter = new SpeechSynthesisUtterance(text);
+                utter.lang = 'ar-SA';
+                utter.rate = 0.85;
+                const voices = window.speechSynthesis.getVoices();
+                const arVoice = voices.find(v => v.lang.toLowerCase().includes('ar'));
+                if (arVoice) utter.voice = arVoice;
+                window.speechSynthesis.speak(utter);
+            } catch (e) {}
+        }
+
+        function speakCurrentWord() {
+            const word = state.deck[state.currentIndex];
+            if (word) speakArabic(word.arabic);
+        }
+
+        // =========================================================================
+        // ٤. التَّحَكُّمُ فِي شَاشَةِ البِدَايَةِ وَالأَوْضَاعِ
+        // =========================================================================
+        function selectStartMode(mode) {
+            state.playerMode = mode;
+            const c1 = document.getElementById('startCardMode1');
+            const c2 = document.getElementById('startCardMode2');
+            if (mode === 1) {
+                c1.className = 'p-4 rounded-2xl border-4 border-indigo-600 bg-indigo-50/90 shadow-md transition-all flex flex-col gap-1.5 text-right';
+                c2.className = 'p-4 rounded-2xl border-4 border-slate-200 bg-slate-50 hover:border-rose-400 transition-all flex flex-col gap-1.5 text-right';
+            } else {
+                c2.className = 'p-4 rounded-2xl border-4 border-rose-600 bg-rose-50/90 shadow-md transition-all flex flex-col gap-1.5 text-right';
+                c1.className = 'p-4 rounded-2xl border-4 border-slate-200 bg-slate-50 hover:border-indigo-400 transition-all flex flex-col gap-1.5 text-right';
+            }
+        }
+
+        function beginGameWithCamera() {
+            SoundFX.init();
+            document.getElementById('startScreenModal').classList.add('hidden');
+            state.useCamera = true;
+            setPlayerMode(state.playerMode, false);
+            if (!state.cameraReady) {
+                initMediaPipeCamera();
+            }
+            restartSession();
+        }
+
+        function beginGameWithoutCamera() {
+            SoundFX.init();
+            document.getElementById('startScreenModal').classList.add('hidden');
+            state.useCamera = false;
+            setPlayerMode(state.playerMode, false);
+            restartSession();
+        }
+
+        function setPlayerMode(mode, shouldRestart = true) {
+            state.playerMode = mode;
+            const btn1 = document.getElementById('btnPlayer1');
+            const btn2 = document.getElementById('btnPlayer2');
+            const p2Box = document.getElementById('p2ScoreBox');
+            const p1Title = document.getElementById('p1LabelTitle');
+
+            if (mode === 1) {
+                btn1.className = 'px-3 py-1.5 rounded-xl transition-all flex items-center gap-1 bg-indigo-600 text-white shadow';
+                btn2.className = 'px-3 py-1.5 rounded-xl transition-all flex items-center gap-1 text-slate-600 hover:text-indigo-700';
+                p2Box.classList.add('hidden');
+                p2Box.classList.remove('flex');
+                p1Title.textContent = 'النِّقَاطُ';
+            } else {
+                btn2.className = 'px-3 py-1.5 rounded-xl transition-all flex items-center gap-1 bg-rose-600 text-white shadow';
+                btn1.className = 'px-3 py-1.5 rounded-xl transition-all flex items-center gap-1 text-slate-600 hover:text-rose-700';
+                p2Box.classList.remove('hidden');
+                p2Box.classList.add('flex');
+                p1Title.textContent = 'اللَّاعِبُ الأَوَّلُ';
+            }
+
+            updateInstructionLabels();
+            if (shouldRestart) restartSession();
+        }
+
+        function updateInstructionLabels() {
+            const rightInstr = document.getElementById('rightGestureInstruction');
+            const leftInstr = document.getElementById('leftGestureInstruction');
+            const liveBanner = document.getElementById('liveInstructionBanner');
+
+            if (state.playerMode === 1) {
+                rightInstr.textContent = 'ارْفَعْ يَدَكَ هُنَا';
+                leftInstr.textContent = 'ارْفَعْ يَدَكَ هُنَا';
+                liveBanner.textContent = 'حَرِّكْ يَدَكَ إِلَى اليَمِينِ (المَأْكُولَاتُ) أَوْ إِلَى اليَسَارِ (المَشْرُوبَاتُ) وَأَبْقِهَا لِثَانِيَةٍ وَاحِدَةٍ';
+            } else {
+                rightInstr.textContent = '☝️ إِصْبَعٌ وَاحِدٌ';
+                leftInstr.textContent = '✌️ إِصْبَعَانِ';
+                liveBanner.textContent = 'اللَّاعِبُ الأَوَّلُ (يَمِينٌ) وَاللَّاعِبُ الثَّانِي (يَسَارٌ): أَظْهِرْ ☝️ لِلْمَأْكُولَاتِ أَوْ ✌️ لِلْمَشْرُوبَاتِ';
+            }
+        }
+
+        // =========================================================================
+        // ٥. الذَّكَاءُ الاصْطِنَاعِيُّ لِتَتَبُّعِ اليَدِ (MEDIAPIPE HANDS)
+        // =========================================================================
+        let handsDetector = null;
+        let cameraInstance = null;
+
+        async function initMediaPipeCamera() {
+            const banner = document.getElementById('cameraBanner');
+            banner.classList.remove('hidden');
+            banner.textContent = 'جَارِي تَشْغِيلُ الكَامِيرَا وَالذَّكَاءِ الاصْطِنَاعِيِّ...';
+
+            try {
+                if (typeof Hands === 'undefined') {
+                    throw new Error('MediaPipe Hands unavailable');
+                }
+
+                handsDetector = new Hands({
+                    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+                });
+
+                handsDetector.setOptions({
+                    maxNumHands: 2,
+                    modelComplexity: 1,
+                    minDetectionConfidence: 0.65,
+                    minTrackingConfidence: 0.6
+                });
+
+                handsDetector.onResults(onHandResults);
+
+                cameraInstance = new Camera(videoEl, {
+                    onFrame: async () => {
+                        if (state.useCamera && handsDetector) {
+                            await handsDetector.send({ image: videoEl });
+                        }
+                    },
+                    width: 1280,
+                    height: 720
+                });
+
+                await cameraInstance.start();
+                state.cameraReady = true;
+                banner.textContent = 'الكَامِيرَا جَاهِزَةٌ! حَرِّكْ يَدَكَ لِلْإِجَابَةِ ✅';
+                setTimeout(() => banner.classList.add('hidden'), 3000);
+            } catch (err) {
+                console.warn('Camera fallback:', err);
+                state.useCamera = false;
+                banner.textContent = 'تَعَذَّرَ فَتْحُ الكَامِيرَا — اسْتَخْدِمِ الأَزْرَارَ أَوْ لَوْحَةَ المَفَاتِيحِ';
+            }
+        }
+
+        function countRaisedFingers(lm) {
+            const indexUp  = lm[8].y < lm[6].y;
+            const middleUp = lm[12].y < lm[10].y;
+            const ringUp   = lm[16].y < lm[14].y;
+            const pinkyUp  = lm[20].y < lm[18].y;
+            const count = [indexUp, middleUp, ringUp, pinkyUp].filter(Boolean).length;
+            return { indexUp, middleUp, ringUp, pinkyUp, count };
+        }
+
+        function onHandResults(results) {
+            state.detectedHands = [];
+            const now = Date.now();
+
+            let p1ActiveChoice = null;
+            let p1Point = null;
+            let p2ActiveChoice = null;
+            let p2Point = null;
+
+            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                for (let i = 0; i < results.multiHandLandmarks.length; i++) {
+                    const lm = results.multiHandLandmarks[i];
+                    // مركز راحة اليد في العرض المعكوس (0.0 يسار الشاشة، 1.0 يمين الشاشة)
+                    const palmX = 1 - lm[9].x;
+                    const palmY = lm[9].y;
+
+                    if (state.playerMode === 1) {
+                        // وضع اللاعب الواحد: يمين الشاشة (> 0.56) = المأكولات، يسار الشاشة (< 0.44) = المشروبات
+                        let zoneChoice = null;
+                        if (palmX > 0.56) zoneChoice = 'makanan';
+                        else if (palmX < 0.44) zoneChoice = 'minuman';
+
+                        if (!p1Point || zoneChoice !== null) {
+                            p1Point = { x: palmX, y: palmY };
+                            p1ActiveChoice = zoneChoice;
+                        }
+                        state.detectedHands.push({
+                            landmarks: lm,
+                            x: palmX,
+                            y: palmY,
+                            choice: zoneChoice,
+                            player: 1
+                        });
+                    } else {
+                        // وضع اللاعبين: النصف الأيمن (palmX >= 0.5) للاعب الأول، النصف الأيسر (palmX < 0.5) للاعب الثاني
+                        const fingers = countRaisedFingers(lm);
+                        let fingerChoice = null;
+                        if (fingers.indexUp && !fingers.middleUp && !fingers.ringUp && !fingers.pinkyUp) {
+                            fingerChoice = 'makanan'; // إصبع واحد = المأكولات
+                        } else if (fingers.indexUp && fingers.middleUp && !fingers.ringUp && !fingers.pinkyUp) {
+                            fingerChoice = 'minuman'; // إصبعان = المشروبات
+                        }
+
+                        if (palmX >= 0.5) {
+                            p1Point = { x: palmX, y: palmY };
+                            p1ActiveChoice = fingerChoice;
+                            state.detectedHands.push({ landmarks: lm, x: palmX, y: palmY, choice: fingerChoice, player: 1 });
+                        } else {
+                            p2Point = { x: palmX, y: palmY };
+                            p2ActiveChoice = fingerChoice;
+                            state.detectedHands.push({ landmarks: lm, x: palmX, y: palmY, choice: fingerChoice, player: 2 });
+                        }
+                    }
+                }
+            }
+
+            updatePlayerHoldProgress(1, p1ActiveChoice, p1Point, now);
+            if (state.playerMode === 2) {
+                updatePlayerHoldProgress(2, p2ActiveChoice, p2Point, now);
+            } else {
+                state.p2.progress = 0;
+                state.p2.hoverChoice = null;
+                state.p2.handPos = null;
+            }
+        }
+
+        function updatePlayerHoldProgress(playerNum, choice, point, now) {
+            const pState = playerNum === 1 ? state.p1 : state.p2;
+            pState.handPos = point;
+
+            if (state.isTransitioning || !choice) {
+                pState.hoverChoice = null;
+                pState.holdStart = 0;
+                pState.progress = 0;
+                return;
+            }
+
+            if (pState.hoverChoice !== choice) {
+                pState.hoverChoice = choice;
+                pState.holdStart = now;
+                pState.progress = 0;
+            } else {
+                const elapsed = now - pState.holdStart;
+                pState.progress = Math.min(1, elapsed / HOLD_DURATION_MS);
+                if (pState.progress >= 1) {
+                    pState.progress = 0;
+                    pState.hoverChoice = null;
+                    evaluateAnswer(playerNum, choice);
+                }
+            }
+        }
+
+        // =========================================================================
+        // ٦. مَنْطِقُ اللُّعْبَةِ وَالتَّقْيِيمُ الفَوْرِيُّ
+        // =========================================================================
+        function shuffle(arr) {
+            const a = [...arr];
+            for (let i = a.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [a[i], a[j]] = [a[j], a[i]];
+            }
+            return a;
+        }
+
+        function restartSession() {
+            if (state.nextCardTimeout) {
+                clearTimeout(state.nextCardTimeout);
+                state.nextCardTimeout = null;
+            }
+            if (state.wrongTimeout) {
+                clearTimeout(state.wrongTimeout);
+                state.wrongTimeout = null;
+            }
+            state.deck = shuffle(VOCABULARY);
+            state.currentIndex = 0;
+            state.isTransitioning = false;
+            state.p1 = { score: 0, hoverChoice: null, holdStart: 0, progress: 0, handPos: null };
+            state.p2 = { score: 0, hoverChoice: null, holdStart: 0, progress: 0, handPos: null };
+
+            updateScoreboardUI();
+            loadCurrentCard();
+        }
+
+        function returnToHome() {
+            if (state.nextCardTimeout) {
+                clearTimeout(state.nextCardTimeout);
+                state.nextCardTimeout = null;
+            }
+            if (state.wrongTimeout) {
+                clearTimeout(state.wrongTimeout);
+                state.wrongTimeout = null;
+            }
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+            }
+
+            state.isTransitioning = true;
+            state.currentIndex = 0;
+            state.p1 = { score: 0, hoverChoice: null, holdStart: 0, progress: 0, handPos: null };
+            state.p2 = { score: 0, hoverChoice: null, holdStart: 0, progress: 0, handPos: null };
+            updateScoreboardUI();
+
+            const summaryModal = document.getElementById('summaryModal');
+            summaryModal.classList.add('hidden');
+            summaryModal.classList.remove('flex');
+
+            const toast = document.getElementById('feedbackToast');
+            toast.classList.remove('opacity-100');
+            toast.classList.add('opacity-0');
+
+            selectStartMode(state.playerMode);
+            document.getElementById('startScreenModal').classList.remove('hidden');
+        }
+
+        function loadCurrentCard() {
+            if (state.currentIndex >= state.deck.length) {
+                showEndSummary();
+                return;
+            }
+
+            const word = state.deck[state.currentIndex];
+            document.getElementById('cardCounterText').textContent =
+                `الكَلِمَةُ ${toArabicDigits(state.currentIndex + 1)} مِنْ ${toArabicDigits(state.deck.length)}`;
+            document.getElementById('cardEmoji').textContent = word.emoji;
+            document.getElementById('cardArabic').textContent = word.arabic;
+
+            const cardEl = document.getElementById('activeWordCard');
+            cardEl.classList.remove('animate-pop', 'animate-wrong');
+            void cardEl.offsetWidth;
+            cardEl.classList.add('animate-pop');
+
+            state.questionStartTime = Date.now();
+            speakArabic(word.arabic);
+        }
+
+        function triggerManualAnswer(playerNum, choice) {
+            if (state.isTransitioning) return;
+            evaluateAnswer(playerNum, choice);
+        }
+
+        function evaluateAnswer(playerNum, chosenCategory) {
+            if (state.isTransitioning) return;
+            const word = state.deck[state.currentIndex];
+            if (!word) return;
+
+            const pState = playerNum === 1 ? state.p1 : state.p2;
+            const playerPrefix = state.playerMode === 2
+                ? (playerNum === 1 ? 'اللَّاعِبُ الأَوَّلُ: ' : 'اللَّاعِبُ الثَّانِي: ')
+                : '';
+
+            if (word.category === chosenCategory) {
+                state.isTransitioning = true;
+                SoundFX.correct();
+
+                const speedBonus = Math.max(0, 30 - Math.floor((Date.now() - state.questionStartTime) / 250));
+                pState.score += 100 + speedBonus;
+                updateScoreboardUI();
+
+                const randIdx = Math.floor(Math.random() * PRAISE_PHRASES.length);
+                showFeedbackToast(`${playerPrefix}${PRAISE_PHRASES[randIdx]}`, 'bg-emerald-600');
+                speakArabic(PRAISE_TTS[randIdx]);
+
+                state.nextCardTimeout = setTimeout(() => {
+                    state.nextCardTimeout = null;
+                    state.currentIndex++;
+                    state.isTransitioning = false;
+                    loadCurrentCard();
+                }, 1450);
+            } else {
+                state.isTransitioning = true;
+                SoundFX.wrong();
+                pState.score = Math.max(0, pState.score - 20);
+                updateScoreboardUI();
+
+                const cardEl = document.getElementById('activeWordCard');
+                cardEl.classList.remove('animate-wrong');
+                void cardEl.offsetWidth;
+                cardEl.classList.add('animate-wrong');
+
+                showFeedbackToast(`${playerPrefix}حَاوِلْ مَرَّةً أُخْرَى! ❌`, 'bg-rose-600');
+                speakArabic('حَاوِلْ مَرَّةً أُخْرَى');
+
+                state.wrongTimeout = setTimeout(() => {
+                    state.wrongTimeout = null;
+                    state.isTransitioning = false;
+                }, 1050);
+            }
+        }
+
+        function showFeedbackToast(message, bgClass) {
+            const toast = document.getElementById('feedbackToast');
+            toast.textContent = message;
+            toast.className = `mt-3 px-6 py-2.5 rounded-2xl font-black text-base sm:text-lg text-white shadow-xl transition-opacity duration-200 opacity-100 ${bgClass}`;
+            setTimeout(() => {
+                toast.classList.remove('opacity-100');
+                toast.classList.add('opacity-0');
+            }, 1250);
+        }
+
+        function updateScoreboardUI() {
+            document.getElementById('p1ScoreText').textContent = toArabicDigits(state.p1.score);
+            document.getElementById('p2ScoreText').textContent = toArabicDigits(state.p2.score);
+        }
+
+        // =========================================================================
+        // ٧. شَاشَةُ النَّتِيجَةِ النِّهَائِيَّةِ وَالاحْتِفَالُ
+        // =========================================================================
+        function showEndSummary() {
+            state.isTransitioning = true;
+            SoundFX.win();
+            speakArabic('مَبْرُوكٌ! أَكْمَلْتَ التَّصْنِيفَ بِنَجَاحٍ');
+            launchConfetti();
+
+            const titleEl = document.getElementById('summaryTitle');
+            const subEl = document.getElementById('summarySubtitle');
+
+            if (state.playerMode === 1) {
+                titleEl.textContent = 'مَبْرُوكٌ! أَكْمَلْتَ التَّصْنِيفَ بِنَجَاحٍ 🏆';
+                subEl.textContent = `النِّقَاطُ النِّهَائِيَّةُ: ${toArabicDigits(state.p1.score)}`;
+            } else {
+                if (state.p1.score > state.p2.score) {
+                    titleEl.textContent = 'فَازَ اللَّاعِبُ الأَوَّلُ! 🏆';
+                } else if (state.p2.score > state.p1.score) {
+                    titleEl.textContent = 'فَازَ اللَّاعِبُ الثَّانِي! 🏆';
+                } else {
+                    titleEl.textContent = 'تَعَادُلٌ رَائِعٌ بَيْنَ اللَّاعِبَيْنِ! 🤝';
+                }
+                subEl.textContent = `اللَّاعِبُ الأَوَّلُ: ${toArabicDigits(state.p1.score)}  |  اللَّاعِبُ الثَّانِي: ${toArabicDigits(state.p2.score)}`;
+            }
+
+            const makananContainer = document.getElementById('reviewMakanan');
+            const minumanContainer = document.getElementById('reviewMinuman');
+            makananContainer.innerHTML = '';
+            minumanContainer.innerHTML = '';
+
+            VOCABULARY.forEach(item => {
+                const btn = document.createElement('button');
+                btn.onclick = () => speakArabic(item.arabic);
+                btn.className = 'flex items-center justify-between bg-white hover:bg-amber-50 border border-slate-200 rounded-xl px-3 py-2 shadow-sm transition active:scale-95';
+                btn.innerHTML = `
+                    <span class="font-black text-lg text-slate-900">${item.arabic}</span>
+                    <span class="text-2xl">${item.emoji}</span>
+                `;
+                if (item.category === 'makanan') {
+                    makananContainer.appendChild(btn);
+                } else {
+                    minumanContainer.appendChild(btn);
+                }
+            });
+
+            const modal = document.getElementById('summaryModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeModalAndRestart() {
+            const modal = document.getElementById('summaryModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            restartSession();
+        }
+
+        // =========================================================================
+        // ٨. لَوْحَةُ المَفَاتِيحِ (KEYBOARD SHORTCUTS)
+        // =========================================================================
+        window.addEventListener('keydown', (e) => {
+            if (!document.getElementById('startScreenModal').classList.contains('hidden')) return;
+            const k = e.key.toLowerCase();
+            // السهم الأيمن أو D = المأكولات (يمين الشاشة)
+            if (e.key === 'ArrowRight' || k === 'd') triggerManualAnswer(1, 'makanan');
+            // السهم الأيسر أو A = المشروبات (يسار الشاشة)
+            if (e.key === 'ArrowLeft' || k === 'a') triggerManualAnswer(1, 'minuman');
+            // للاعب الثاني: K = المأكولات، J = المشروبات
+            if (k === 'k') triggerManualAnswer(2, 'makanan');
+            if (k === 'j') triggerManualAnswer(2, 'minuman');
+        });
+
+        // =========================================================================
+        // ٩. الرَّسْمُ عَلَى الكَانْفَاس (CANVAS RENDER LOOP)
+        // =========================================================================
+        const HAND_CONNECTIONS = [
+            [0,1],[1,2],[2,3],[3,4],
+            [0,5],[5,6],[6,7],[7,8],
+            [5,9],[9,10],[10,11],[11,12],
+            [9,13],[13,14],[14,15],[15,16],
+            [13,17],[0,17],[17,18],[18,19],[19,20]
+        ];
+
+        function resizeCanvas() {
+            const rect = canvasEl.parentElement.getBoundingClientRect();
+            canvasEl.width = rect.width;
+            canvasEl.height = rect.height;
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+        function renderCanvasLoop() {
+            const w = canvasEl.width;
+            const h = canvasEl.height;
+            ctx.clearRect(0, 0, w, h);
+
+            // ١. خَلْفِيَّةُ الكَامِيرَا أَوْ التَّدَرُّجُ اللَّوْنِيُّ
+            if (state.useCamera && state.cameraReady && videoEl.readyState >= 2) {
+                ctx.save();
+                ctx.translate(w, 0);
+                ctx.scale(-1, 1);
+                const vidRatio = videoEl.videoWidth / videoEl.videoHeight;
+                const canRatio = w / h;
+                let drawW = w, drawH = h, offsetX = 0, offsetY = 0;
+                if (canRatio > vidRatio) {
+                    drawH = w / vidRatio;
+                    offsetY = (h - drawH) / 2;
+                } else {
+                    drawW = h * vidRatio;
+                    offsetX = (w - drawW) / 2;
+                }
+                ctx.drawImage(videoEl, offsetX, offsetY, drawW, drawH);
+                ctx.restore();
+
+                ctx.fillStyle = 'rgba(15, 23, 42, 0.25)';
+                ctx.fillRect(0, 0, w, h);
+            } else {
+                const grad = ctx.createLinearGradient(0, 0, w, 0);
+                grad.addColorStop(0, '#0284c7');
+                grad.addColorStop(0.5, '#1e293b');
+                grad.addColorStop(1, '#059669');
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, w, h);
+            }
+
+            // ٢. تَظْلِيلُ مَنَاطِقِ المَأْكُولَاتِ (يَمِينٌ) وَالمَشْرُوبَاتِ (يَسَارٌ)
+            const p1Hover = state.p1.hoverChoice;
+            // المنطقة اليسرى: المشروبات
+            ctx.fillStyle = p1Hover === 'minuman' ? 'rgba(14, 165, 233, 0.32)' : 'rgba(14, 165, 233, 0.10)';
+            ctx.fillRect(0, 0, w * 0.44, h);
+
+            // المنطقة اليمنى: المأكولات
+            ctx.fillStyle = p1Hover === 'makanan' ? 'rgba(16, 185, 129, 0.32)' : 'rgba(16, 185, 129, 0.10)';
+            ctx.fillRect(w * 0.56, 0, w * 0.44, h);
+
+            // ٣. رَسْمُ نِقَاطِ اليَدِ وَحَلْقَةِ التَّأْكِيدِ الدَّائِرِيَّةِ
+            state.detectedHands.forEach(hand => {
+                const color = hand.choice === 'makanan' ? '#10b981' : (hand.choice === 'minuman' ? '#38bdf8' : '#fbbf24');
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 3;
+
+                HAND_CONNECTIONS.forEach(([a, b]) => {
+                    const x1 = (1 - hand.landmarks[a].x) * w;
+                    const y1 = hand.landmarks[a].y * h;
+                    const x2 = (1 - hand.landmarks[b].x) * w;
+                    const y2 = hand.landmarks[b].y * h;
+                    ctx.beginPath();
+                    ctx.moveTo(x1, y1);
+                    ctx.lineTo(x2, y2);
+                    ctx.stroke();
+                });
+
+                ctx.fillStyle = '#ffffff';
+                hand.landmarks.forEach(pt => {
+                    ctx.beginPath();
+                    ctx.arc((1 - pt.x) * w, pt.y * h, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+            });
+
+            // حَلْقَةُ التَّقَدُّمِ لِلَّاعِبِ الأَوَّلِ وَالثَّانِي
+            [state.p1, state.p2].forEach(pState => {
+                if (pState.handPos && pState.progress > 0) {
+                    const cx = pState.handPos.x * w;
+                    const cy = pState.handPos.y * h;
+                    const ringColor = pState.hoverChoice === 'makanan' ? '#10b981' : '#38bdf8';
+                    const labelText = pState.hoverChoice === 'makanan' ? 'المَأْكُولَاتُ...' : 'المَشْرُوبَاتُ...';
+
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, 44, 0, Math.PI * 2);
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+                    ctx.lineWidth = 8;
+                    ctx.stroke();
+
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, 44, -Math.PI / 2, -Math.PI / 2 + pState.progress * Math.PI * 2);
+                    ctx.strokeStyle = ringColor;
+                    ctx.lineWidth = 8;
+                    ctx.lineCap = 'round';
+                    ctx.stroke();
+
+                    ctx.font = '900 18px Cairo, sans-serif';
+                    ctx.fillStyle = '#ffffff';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(labelText, cx, cy - 56);
+                    ctx.restore();
+                }
+            });
+
+            requestAnimationFrame(renderCanvasLoop);
+        }
+
+        // =========================================================================
+        // ١٠. مُؤَثِّرَاتُ الاحْتِفَالِ (CONFETTI)
+        // =========================================================================
+        function launchConfetti() {
+            const cCanvas = document.getElementById('confettiCanvas');
+            const cCtx = cCanvas.getContext('2d');
+            cCanvas.width = window.innerWidth;
+            cCanvas.height = window.innerHeight;
+
+            const colors = ['#10b981', '#0ea5e9', '#f59e0b', '#ec4899', '#8b5cf6'];
+            const pieces = Array.from({ length: 90 }, () => ({
+                x: Math.random() * cCanvas.width,
+                y: -20 - Math.random() * 200,
+                size: 7 + Math.random() * 8,
+                vy: 3 + Math.random() * 4,
+                vx: -2 + Math.random() * 4,
+                color: colors[Math.floor(Math.random() * colors.length)],
+                rot: Math.random() * Math.PI * 2
+            }));
+
+            let frame = 0;
+            function step() {
+                frame++;
+                cCtx.clearRect(0, 0, cCanvas.width, cCanvas.height);
+                pieces.forEach(p => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.rot += 0.08;
+                    cCtx.save();
+                    cCtx.translate(p.x, p.y);
+                    cCtx.rotate(p.rot);
+                    cCtx.fillStyle = p.color;
+                    cCtx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.6);
+                    cCtx.restore();
+                });
+                if (frame < 180) {
+                    requestAnimationFrame(step);
+                } else {
+                    cCtx.clearRect(0, 0, cCanvas.width, cCanvas.height);
+                }
+            }
+            step();
+        }
+
+        window.onload = function () {
+            resizeCanvas();
+            renderCanvasLoop();
+        };
+    </script>
+</body>
+</html>
